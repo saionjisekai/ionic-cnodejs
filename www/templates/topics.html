@@ -1,0 +1,24 @@
+<ion-view title="Node.js专业中文社区">
+	<ion-nav-buttons side="left">
+		<button menu-toggle="left" class="button button-icon icon ion-navicon"></button>
+	</ion-nav-buttons>
+	<ion-nav-buttons side="right">
+		<button menu-toggle="right" class="button button-icon ion-refresh" ng-click="refresh()"></button>
+	</ion-nav-buttons>
+	<ion-content>
+		<!--<div class="button-bar bar-balanced">-->
+			<!--<a class="button active">全部</a>-->
+			<!--<a class="button">分享</a>-->
+			<!--<a class="button">问答</a>-->
+			<!--<a class="button">招聘</a>-->
+		<!--</div>-->
+		<div class="list list-topics">
+			<a class="item text-center" ng-show="topics==null">加载中...</a>
+			<a class="item item-avatar" ng-repeat="topic in topics" href="#/app/topic/{{topic.id}}">
+				<img src="img/avatar.png" ng-src="{{ topic.author.avatar_url }}" alt="{{ topic.author.loginname }}" onerror="this.src='img/avatar.png'"/>
+				<h2>{{ topic.title }}</h2>
+				<p><span class="tab">{{ topic.tab | TabFilter:topic.top }}</span> {{ topic.last_reply_at | date:'yyyy/MM/dd HH:mm' }}</p>
+			</a>
+		</div>
+	</ion-content>
+</ion-view>

@@ -1,0 +1,39 @@
+<ion-view title="主题详情">
+	<ion-content>
+		<div class="padding">
+			<h3>{{ topic.title }}</h3>
+			<div class="topic-content" ng-bind-html="topic.content"></div>
+		</div>
+		<div class="padding">
+			<div class="list list-replies">
+				<div class="item text-center" style="border: 0;" ng-show="topic==null">加载中...</div>
+				<div class="item item-divider" style="border: 0;" ng-show="topic!=null">{{ topic.replies.length }} 回复</div>
+			</div>
+			<div class="list list-replies" ng-repeat="replie in topic.replies">
+				<div class="item item-avatar item-avatar-sm">
+					<img ng-src="{{ replie.author.avatar_url }}" alt="{{ replie.author.loginname }}" onerror="this.src='img/avatar.png'"/>
+					<h4>{{ replie.author.loginname }}</h4>
+					<p>{{ replie.create_at | date:'yyyy/MM/dd HH:mm' }}</p>
+				</div>
+				<div class="item item-content" ng-bind-html="replie.content"></div>
+			</div>
+		</div>
+		<!--<div class="list card" ng-repeat="replie in topic.replies">
+			<div class="item item-avatar">
+				<img src="img/avatar.png" ng-src="{{ replie.author.avatar_url }}" alt="{{ replie.author.loginname }}" onerror="this.src='img/avatar.png'"/>
+				<h2>{{ replie.author.loginname }}</h2>
+				<p>{{ replie.create_at | date:'yyyy年MM月dd日 HH点mm分' }}</p>
+			</div>
+			<div class="item item-body">
+				<img class="full-image" src="delorean.jpg">
+				<div ng-bind-html="replie.content"></div>
+				<p><a href="#" class="subdued">1 Like</a><a href="#" class="subdued">5 Comments</a></p>
+			</div>
+			<div class="item tabs tabs-secondary tabs-icon-left">
+				<a class="tab-item" href="#"><i class="icon ion-thumbsup"></i>Like</a>
+				<a class="tab-item" href="#"><i class="icon ion-chatbox"></i>Comment</a>
+				<a class="tab-item" href="#"><i class="icon ion-share"></i>Share</a>
+			</div>
+		</div>-->
+	</ion-content>
+</ion-view>
