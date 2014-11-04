@@ -4,9 +4,9 @@
 // 'starter' is the name of this angular module example (also set in a <body> attribute in index.html)
 // the 2nd parameter is an array of 'requires'
 // 'starter.controllers' is found in controllers.js
-angular.module('starter', ['ionic', 'starter.controllers'])
+angular.module('starter', ['ionic', 'starter.controllers', 'starter.factories'])
 
-	.run(function($ionicPlatform){
+	.run(function($ionicPlatform, SettingFactory, $http){
 		$ionicPlatform.ready(function(){
 			// Hide the accessory bar by default (remove this to show the accessory bar above the keyboard
 			// for form inputs)
@@ -18,6 +18,10 @@ angular.module('starter', ['ionic', 'starter.controllers'])
 				StatusBar.styleDefault();
 			}
 		});
+		// 初始化 设置
+		if ( !SettingFactory.get() || window.SETTING.version != SettingFactory.get('version') || window.SETTING.reset ) {
+			SettingFactory.save(window.SETTING);
+		}
 	})
 
 	.config(function($stateProvider, $urlRouterProvider){
@@ -33,7 +37,7 @@ angular.module('starter', ['ionic', 'starter.controllers'])
 			.state('app.topics', {
 				url: "/topics",
 				views: {
-					'menuContent': {
+					'content': {
 						templateUrl: "templates/topics.html",
 						controller: 'TopicsCtrl'
 					}
@@ -43,7 +47,7 @@ angular.module('starter', ['ionic', 'starter.controllers'])
 			.state('app.topic', {
 				url: "/topic/:id",
 				views: {
-					'menuContent': {
+					'content': {
 						templateUrl: "templates/topic.html",
 						controller: 'TopicCtrl'
 					}

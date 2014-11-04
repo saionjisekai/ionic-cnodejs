@@ -1,145 +1,214 @@
-angular.module('starter.controllers', [])
+angular.module('starter.controllers', ['starter.factories', 'starter.services', 'starter.filters' ])
 
-	.service('CacheService', function($window){
-		var append = function(key, value){
-		};
-		var save = function(key, value){
-			$window.localStorage.setItem(key, typeof value == 'object' ? JSON.stringify(value) : value);
-		};
-		var get = function(key){
-			return $window.localStorage.getItem(key) || null;
-		};
-		var empty = function(key){
-			$window.localStorage.removeItem(key);
-		};
-		return {
-			append: append,
-			save: save,
-			get: get,
-			empty: empty
-		};
-	})
+	.controller('AppCtrl', function($scope, $location, $ionicModal, $ionicPopup, CacheFactory, SettingFactory, HttpFactory){
 
-	.factory('TopicsFactory', function($rootScope){
+		$scope.accessToken = CacheFactory.get('accessToken');
 
-		var topics = [];
+		$scope.setting = SettingFactory.get();
 
-		/**
-		 * 更新topics
-		 * @param newTopics
-		 * @param append true:追加 false:替换
-		 */
-		var update = function(newTopics, append){
-			if ( append ) {
-				topics.push(newTopics);
-			} else {
-				topics = newTopics;
-			}
-			$rootScope.$broadcast('topics.update', topics);
+		// 保存头像设置
+		$scope.settingAvatar = function(){
+			SettingFactory.save('avatar', $scope.setting.avatar);
 		};
 
-		return {
-			topics: topics,
-			update: update
-		}
-	})
-
-	.factory('TopicFactory', function($rootScope){
-
-		var topic = {};
-
-		/**
-		 * 更新topic
-		 * @param newTopic
-		 */
-		var update = function(newTopic){
-			$rootScope.$broadcast('topic.update', topics = newTopic);
+		// 暂且复制上面的
+		$scope.settingImage = function(){
+			SettingFactory.save('image', $scope.setting.image);
 		};
 
-		return {
-			update: update
-		}
-	})
-
-	.filter('TabFilter', function(){
-		var tabs = {
-			ask: '提问',
-			share: '分享',
-			job: '招聘'
-		};
-		return function(tab, top){
-			return top ? '置顶' : (tabs[tab] || '自由');
-		}
-	})
-
-	.controller('AppCtrl', function($scope, $ionicModal, $timeout){
-		// Form data for the login modal
-		$scope.loginData = {};
-
-		// Create the login modal that we will use later
-		$ionicModal.fromTemplateUrl('templates/login.html', {
-			scope: $scope
-		}).then(function(modal){
-			$scope.modal = modal;
-		});
-
-		// Triggered in the login modal to close it
-		$scope.closeLogin = function(){
-			$scope.modal.hide();
-		};
-
-		// Open the login modal
-		$scope.login = function(){
-			$scope.modal.show();
-		};
-
-		// Perform the login action when the user submits the login form
-		$scope.doLogin = function(){
-			console.log('Doing login', $scope.loginData);
-
-			// Simulate a login delay. Remove this and replace with your login
-			// code if using a login system
-			$timeout(function(){
-				$scope.closeLogin();
-			}, 1000);
-		};
-	})
-
-	// 主题首页
-	.controller('TopicsCtrl', function($scope, $http, CacheService, TopicsFactory){
-
-		var topics = CacheService.get('topics');
-
-		$scope.refresh = function(){
-			$http.get(API.TOPICS).success(function(response){
-				CacheService.save('topics', response.data);
-				TopicsFactory.update(response.data);
+		// 修改小尾巴
+		$scope.settingTail = function(){
+			$ionicPopup.prompt({
+				title: '新的小尾巴：',
+				inputType: 'text',
+				inputPlaceholder: $scope.setting.tail,
+				cancelText: '取消',
+				okText: '保存',
+				okType: 'button-balanced'
+			}).then(function(tail){
+				if ( tail == undefined ) return;
+				// 补全markdown格式小尾巴
+				tail = tail.indexOf('\n') != 0 ? '\n----------\n' + tail : '';
+				// 新建话题的内容尾巴直接改掉算了。
+				SettingFactory.save('tail', $scope.topicParams.content = $scope.setting.tail = tail);
 			});
 		};
 
-		$scope.$on('topics.update', function(event, newTopics){
-			$scope.topics = newTopics;
-			console.log(newTopics);
+		/**
+		 * 登录
+		 */
+		$scope.loginParams = {};
+
+		$ionicModal.fromTemplateUrl('templates/login.html', {
+			scope: $scope
+		}).then(function(modal){
+			$scope.loginModal = modal;
 		});
 
-		if ( topics != null ) {
-			$scope.topics = JSON.parse(topics);
+		$scope.saveToken = function(){
+			if ( /\w{8}-\w{4}-\w{4}-\w{4}-\w{12}/.test($scope.loginParams.accessToken) ) {
+				CacheFactory.save('accessToken', $scope.accessToken = $scope.loginParams.accessToken);
+				$scope.loginModal.hide();
+				$scope.loginParams = {};
+			} else {
+				$scope.loginParams.message = '不是正确的Access Token！';
+			}
+		};
+
+		// 退出
+		$scope.quit = function(){
+			$scope.accessToken = null;
+			CacheFactory.remove('accessToken');
+		};
+
+		/**
+		 * 发布话题 modal
+		 */
+		$ionicModal.fromTemplateUrl('templates/new_topic.html', {
+			scope: $scope
+		}).then(function(modal){
+			$scope.newTopicModal = modal;
+		});
+
+		$scope.topicParams = {
+			title: '',
+			tab: 'share',
+			content: '' + $scope.setting.tail
+		};
+
+		$scope.newTopic = function(){
+			HttpFactory.send({
+				url: API.NEW_TOPICS,
+				data: $scope.topicParams,
+				method: 'post',
+				mask: true
+			}).success(function(response){
+				if ( response.success ) {
+					$scope.newTopicModal.hide();
+					$location.url('/app/topic/' + response.topic_id);
+				}
+				$scope.topicParams = {tab: 'share'};
+			});
+		};
+
+	})
+
+	// 主题首页
+	.controller('TopicsCtrl', function($scope, HttpFactory, CacheFactory){
+
+		var topicsCache = JSON.parse(CacheFactory.get('topics'));
+
+		$scope.refresh = function(){
+			HttpFactory.send({
+				url: API.TOPICS,
+				params: {
+					tab: $scope.tab
+				},
+				scope: $scope
+			}).success(function(response){
+				if ( !!response.data ) {
+					CacheFactory.save('topics', {
+						data: $scope.topics = response.data,
+						tab: $scope.tab
+					});
+				}
+			});
+		};
+
+		$scope.changeTab = function(tab){
+			$scope.tab = tab;
+			$scope.refresh();
+		};
+
+		if ( topicsCache != null ) {
+			$scope.tab = topicsCache.tab;
+			$scope.topics = topicsCache.data;
 		} else {
+			$scope.tab = 'all';
 			$scope.refresh();
 		}
 
 	})
 
 	// 主题详情
-	.controller('TopicCtrl', function($scope, $http, $stateParams, TopicFactory){
+	.controller('TopicCtrl', function($scope, $stateParams, $ionicModal, $ionicPopup, HttpFactory, ImageService){
+
 		$scope.id = $stateParams.id;
 
-		$http.get(API.TOPIC_DETAIL.formatParam($scope.id)).success(function(response){
-			TopicFactory.update(response.data);
+		var updateTopic = function(all){
+			HttpFactory.send({
+				url: API.TOPIC_DETAIL.formatParam($scope.id),
+				scope: $scope
+			}).success(function(response){
+				if ( !!response.data ) {
+					if ( all ) {
+						response.data.content = ImageService.replaceUrlString(response.data.content);
+						$scope.topic = response.data;
+					} else {
+						$scope.topic.replies = response.data.replies;
+					}
+				} else if ( response.error_msg && response.error_msg.indexOf(ERROR.IS_NOT_EXISTS) ) {
+					$scope.topic = {
+						isNotExists: true
+					}
+				}
+			});
+		};
+
+		updateTopic(true);
+
+		$scope.updateHeart = function(replie){
+			HttpFactory.send({
+				url: API.UPS.formatParam(replie.id),
+				method: 'post',
+				mask: true
+			}).success(function(response){
+				if ( response.success ) {
+					replie.ups = response.action == 'up' ? [1] : replie.ups = [];
+				} else if ( response.error_msg == ERROR.HEHE_YOU_CANNOT ) {
+					$ionicPopup.alert({
+						title: ERROR.HEHE_YOU_CANNOT,
+						template: '上面的标题，是原话...',
+						buttons: [
+							{ text: '靠', type: 'button-balanced' }
+						]
+					});
+				}
+			});
+		};
+
+		/**
+		 * 评论
+		 */
+		$ionicModal.fromTemplateUrl('templates/new_replie.html', {
+			scope: $scope
+		}).then(function(modal){
+			$scope.newReplieModal = modal;
 		});
 
-		$scope.$on('topic.update', function(event, newTopic){
-			$scope.topic = newTopic;
-		});
+		$scope.at = '';
+
+		$scope.preReplie = function(id, name){
+			$scope.at = name || name;
+			$scope.replieParams = {
+				reply_id: id || '',
+				content: '@' + $scope.at + '：'
+			};
+			$scope.newReplieModal.show();
+		};
+
+		$scope.newReplie = function(){
+			HttpFactory.send({
+				url: API.REPLIES.formatParam($scope.id),
+				data: $scope.replieParams,
+				method: 'post',
+				mask: true
+			}).success(function(response){
+				if ( response.success ) {
+					$scope.newReplieModal.hide();
+					updateTopic();
+				}
+			});
+		};
 
 	});
